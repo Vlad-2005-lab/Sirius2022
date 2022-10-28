@@ -12,8 +12,8 @@ address = "http://192.168.56.1:8080"
 # req = requests.request("POST", f"{address}/api/update", json={"id": 4, "okey": False})
 # req = requests.request("POST", f"{address}/api/check_uid", json={"uid": "228"})
 # req = requests.request("POST", f"{address}/api/create_employee", json={"tg_id": 228, "name": "abc", "uid": "1236"})
-# req = requests.request("GET", f"{address}/api/get_all_devices")
-req = requests.request("GET", f"{address}/api/get_all_employees")
+req = requests.request("GET", f"{address}/api/get_all_devices")
+# req = requests.request("GET", f"{address}/api/get_all_employees")
 try:
     print(req.json())
 except Exception:
