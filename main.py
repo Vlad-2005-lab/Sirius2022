@@ -18,6 +18,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my the best secret key'
 
 bot = telebot.TeleBot(open('data/token.txt').read())
+LAST_UID = ""
 SMILE = [emojize("🟩"),
          emojize("🟧"),
          emojize("🟥"),
@@ -594,7 +595,7 @@ def start_checker():
 
 
 def start_api():
-    app.run(port=8080, host='192.168.56.1')
+    app.run(port=8080)
 
 
 thread_bot = threading.Thread(target=start_bot)
