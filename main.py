@@ -17,8 +17,10 @@ import re
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my the best secret key'
 
-bot = telebot.TeleBot(open('data/token.txt').read())
+bot_jun = telebot.TeleBot(open('data/token_jun.txt').read())
+bot_master = telebot.TeleBot(open('data/token_master.txt').read())
 LAST_UID = ""
+ADMIN_ID = [852437633, 271668384]
 SMILE = [emojize("🟩"),
          emojize("🟧"),
          emojize("🟥"),
@@ -150,25 +152,25 @@ def print_menu(message: telebot.types.Message):
     devices = session.query(Device).all()
     session.close()
     buttons = get_buttons(devices)
-    bot.send_message(message.from_user.id, f"Список устройств:", reply_markup=buttons_creator(buttons))
+    bot_jun.send_message(message.from_user.id, f"Список устройств:", reply_markup=buttons_creator(buttons))
 
 
 def get_seconds(date: datetime.timedelta):
     return date.days * 24 * 60 * 60 + date.seconds
 
 
-@bot.message_handler(content_types=['text'])
+@bot_jun.message_handler(content_types=['text'])
 def get_text_messages(message: telebot.types.Message):
     text = "Здравствуйте, здесь вы можете посмотреть занятость принтеров.\n"
-    bot.send_message(message.from_user.id, text)
+    bot_jun.send_message(message.from_user.id, text)
     text = "Для обозначения состояния принтера используются разные цвета:\n\n" \
            f"{SMILE[0]} - свободен\n" \
            f"{SMILE[1]} - печать закончена, но есть очередь на печать\n" \
            f"{SMILE[2]} - печатает\n" \
            f"{SMILE[3]} - не работает"
-    bot.send_message(message.from_user.id, text)
+    bot_jun.send_message(message.from_user.id, text)
     print_menu(message)
-    return bot.register_next_step_handler(message, main_menu)
+    return bot_jun.register_next_step_handler(message, main_menu)
 
 
 def main_menu(message: telebot.types.Message):
@@ -182,26 +184,28 @@ def main_menu(message: telebot.types.Message):
                 employee.creating_task = False
                 session.commit()
                 session.close()
-                return bot.register_next_step_handler(message, main_menu)
+                return bot_jun.register_next_step_handler(message, main_menu)
             if not id_device.isdigit():
-                bot.send_message(message.from_user.id, "Такого ID нет, попробуйте снова:",
-                                 reply_markup=keyboard_creator(["Отмена"]))
+                bot_jun.send_message(message.from_user.id, "Такого ID нет, попробуйте снова:",
+                                     reply_markup=keyboard_creator(["Отмена"]))
                 session.close()
-                return bot.register_next_step_handler(message, main_menu)
+                return bot_jun.register_next_step_handler(message, main_menu)
             id_device = int(id_device)
             employee = session.query(Employee).filter(Employee.tg_id == message.from_user.id).first()
 
             device = session.query(Device).filter(Device.id == id_device).first()
             if device.working:
                 session.close()
-                bot.send_message(message.from_user.id, "Это устройство занято, используйте другое. Введите новое ID:",
-                                 reply_markup=keyboard_creator(["Отмена"]))
-                return bot.register_next_step_handler(message, main_menu)
+                bot_jun.send_message(message.from_user.id,
+                                     "Это устройство занято, используйте другое. Введите новое ID:",
+                                     reply_markup=keyboard_creator(["Отмена"]))
+                return bot_jun.register_next_step_handler(message, main_menu)
             if not device.okey:
                 session.close()
-                bot.send_message(message.from_user.id, "Это устройство неготово, используйте другое. Введите новое ID:",
-                                 reply_markup=keyboard_creator(["Отмена"]))
-                return bot.register_next_step_handler(message, main_menu)
+                bot_jun.send_message(message.from_user.id,
+                                     "Это устройство неготово, используйте другое. Введите новое ID:",
+                                     reply_markup=keyboard_creator(["Отмена"]))
+                return bot_jun.register_next_step_handler(message, main_menu)
 
             task = Task()
             task.id_employee = employee.id
@@ -210,18 +214,18 @@ def main_menu(message: telebot.types.Message):
             session.add(task)
             session.commit()
             session.close()
-            bot.send_message(message.from_user.id,
-                             "На сколько по времени вы занимаете устройство(введите в формате ЧЧ:ММ:СС):",
-                             reply_markup=keyboard_creator(["Отмена"]))
-            return bot.register_next_step_handler(message, task_ask_2)
+            bot_jun.send_message(message.from_user.id,
+                                 "На сколько по времени вы занимаете устройство(введите в формате ЧЧ:ММ:СС):",
+                                 reply_markup=keyboard_creator(["Отмена"]))
+            return bot_jun.register_next_step_handler(message, task_ask_2)
     if message.text == "/my_id":
-        bot.send_message(message.from_user.id, f"Ваш Tg_ID: {message.from_user.id}")
+        bot_jun.send_message(message.from_user.id, f"Ваш Tg_ID: {message.from_user.id}")
     else:
         print_menu(message)
-    return bot.register_next_step_handler(message, main_menu)
+    return bot_jun.register_next_step_handler(message, main_menu)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split()[0] == "left")
+@bot_jun.callback_query_handler(func=lambda call: call.data.split()[0] == "left")
 def callback_worker_left(call: telebot.types.CallbackQuery):
     session = db_session.create_session()
     devices = session.query(Device).all()
@@ -233,12 +237,12 @@ def callback_worker_left(call: telebot.types.CallbackQuery):
             buttons = get_buttons(devices, n // 5 * 5)
     else:
         buttons = get_buttons(devices, int(call.data.split()[1]) - 5)
-    bot.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
-                          reply_markup=buttons_creator(buttons))
+    bot_jun.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
+                              reply_markup=buttons_creator(buttons))
     session.close()
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split()[0] == "right")
+@bot_jun.callback_query_handler(func=lambda call: call.data.split()[0] == "right")
 def callback_worker_right(call: telebot.types.CallbackQuery):
     session = db_session.create_session()
     devices = session.query(Device).all()
@@ -247,12 +251,12 @@ def callback_worker_right(call: telebot.types.CallbackQuery):
         buttons = get_buttons(devices, 0)
     else:
         buttons = get_buttons(devices, int(call.data.split()[1]) + 5)
-    bot.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
-                          reply_markup=buttons_creator(buttons))
+    bot_jun.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
+                              reply_markup=buttons_creator(buttons))
     session.close()
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split()[0] == "update")
+@bot_jun.callback_query_handler(func=lambda call: call.data.split()[0] == "update")
 def callback_worker_update(call: telebot.types.CallbackQuery):
     session = db_session.create_session()
     devices = session.query(Device).all()
@@ -262,14 +266,14 @@ def callback_worker_update(call: telebot.types.CallbackQuery):
     else:
         buttons = get_buttons(devices, int(call.data.split()[1]))
     try:
-        bot.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
-                              reply_markup=buttons_creator(buttons))
+        bot_jun.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
+                                  reply_markup=buttons_creator(buttons))
     except telebot.apihelper.ApiTelegramException:
         pass
     session.close()
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split()[0] == "device")
+@bot_jun.callback_query_handler(func=lambda call: call.data.split()[0] == "device")
 def callback_worker_info(call: telebot.types.CallbackQuery):
     session = db_session.create_session()
     device: Device = session.query(Device).filter(Device.id == int(call.data.split()[1])).first()
@@ -279,14 +283,14 @@ def callback_worker_info(call: telebot.types.CallbackQuery):
         SMILE[6]: f"back {call.data.split()[2]}"
     }}
     try:
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id,
-                              reply_markup=buttons_creator(buttons))
+        bot_jun.edit_message_text(text, call.message.chat.id, call.message.message_id,
+                                  reply_markup=buttons_creator(buttons))
     except telebot.apihelper.ApiTelegramException:
         pass
     session.close()
 
 
-@bot.callback_query_handler(func=lambda call: call.data.split()[0] == "back")
+@bot_jun.callback_query_handler(func=lambda call: call.data.split()[0] == "back")
 def callback_worker_back(call: telebot.types.CallbackQuery):
     session = db_session.create_session()
     devices = session.query(Device).all()
@@ -295,8 +299,8 @@ def callback_worker_back(call: telebot.types.CallbackQuery):
         buttons = get_buttons(devices, int(call.data.split()[1]))
     else:
         buttons = get_buttons(devices)
-    bot.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
-                          reply_markup=buttons_creator(buttons))
+    bot_jun.edit_message_text("Список устройств:", call.message.chat.id, call.message.message_id,
+                              reply_markup=buttons_creator(buttons))
     session.close()
 
 
@@ -312,13 +316,13 @@ def task_ask_2(message: telebot.types.Message):
         session.commit()
         session.close()
         print_menu(message)
-        return bot.register_next_step_handler(message, main_menu)
+        return bot_jun.register_next_step_handler(message, main_menu)
     pattern = r"\d+:\d+:\d+"
     if not re.match(pattern, message.text):
         session.close()
-        bot.send_message(message.from_user.id, "Вы ввели время в неправильном формате, попробуйте снова(ЧЧ:ММ:СС):",
-                         reply_markup=keyboard_creator(["Отмена"]))
-        return bot.register_next_step_handler(message, task_ask_2)
+        bot_jun.send_message(message.from_user.id, "Вы ввели время в неправильном формате, попробуйте снова(ЧЧ:ММ:СС):",
+                             reply_markup=keyboard_creator(["Отмена"]))
+        return bot_jun.register_next_step_handler(message, task_ask_2)
     task = None
     for i in tasks:
         i: Task
@@ -331,7 +335,7 @@ def task_ask_2(message: telebot.types.Message):
     session.commit()
     session.close()
     print_menu(message)
-    return bot.register_next_step_handler(message, main_menu)
+    return bot_jun.register_next_step_handler(message, main_menu)
 
 
 # Telegram bot checker
@@ -351,8 +355,8 @@ def checker():
                     # уведомление
                     employee = session.query(Employee).filter(Employee.id == task.id_employee).first()
                     device = session.query(Device).filter(Device.id == task.id_device).first()
-                    bot.send_message(employee.tg_id,
-                                     f"""Устройство "{device.name}" с ID: {device.id} завершило работу""")
+                    bot_jun.send_message(employee.tg_id,
+                                         f"""Устройство "{device.name}" с ID: {device.id} завершило работу""")
                     device.queue = []
                     device.working = False
                     session.delete(task)
@@ -459,6 +463,7 @@ def get_all_employees():
 
 @app.route('/api/create_employee', methods=['POST'])
 def create_employee():
+    global LAST_UID
     if not request.json:
         abort(500)
     session = db_session.create_session()
@@ -467,6 +472,8 @@ def create_employee():
         employee.tg_id = request.json.get("tg_id")
         employee.name = request.json.get("name")
         employee.uid = request.json.get("uid")
+        if request.json.get("uid") == "":
+            employee.uid = LAST_UID
         session.add(employee)
         session.commit()
     except sqlalchemy.exc.IntegrityError:
@@ -523,12 +530,14 @@ def delete_employee():
 
 @app.route('/api/check_uid', methods=['POST'])
 def check_uid():
+    global LAST_UID
     if not request.json:
         abort(500)
     session = db_session.create_session()
     uid = request.json.get("uid")
     if uid == "":
         abort(500)
+    LAST_UID = uid
     employees = session.query(Employee).all()
     pattern = "%Y-%m-%d %H:%M:%S.%f"
     for employee in employees:
@@ -545,7 +554,7 @@ def check_uid():
                     session.close()
                     return "closed"
                 if get_seconds(today - valid_from) < 0:
-                    bot.send_message(employee.tg_id, "У вас недостаточно прав.")
+                    bot_jun.send_message(employee.tg_id, "У вас недостаточно прав.")
                     session.close()
                     return "closed"
             if valid_to:
@@ -556,11 +565,12 @@ def check_uid():
                     session.close()
                     return "closed"
                 if get_seconds(valid_to - today) < 0:
-                    bot.send_message(employee.tg_id, "У вас недостаточно прав.")
+                    bot_jun.send_message(employee.tg_id, "У вас недостаточно прав.")
                     session.close()
                     return "closed"
-            bot.send_message(employee.tg_id, "Введите ID устройства(можно узнать, если нажать на устройство в списке):",
-                             reply_markup=keyboard_creator(["Отмена"]))
+            bot_jun.send_message(employee.tg_id,
+                                 "Введите ID устройства(можно узнать, если нажать на устройство в списке):",
+                                 reply_markup=keyboard_creator(["Отмена"]))
             employee.creating_task = True
             session.commit()
             session.close()
@@ -577,7 +587,7 @@ def start_bot():
     while True:
         try:
             print('\033[0mStarting.....')
-            bot.infinity_polling()
+            bot_jun.infinity_polling()
         except Exception as err:
             print('\033[31mCrashed.....')
             print(f"Error: {err}")
