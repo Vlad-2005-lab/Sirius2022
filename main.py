@@ -338,6 +338,289 @@ def task_ask_2(message: telebot.types.Message):
     return bot_jun.register_next_step_handler(message, main_menu)
 
 
+# Telegram admin bot
+
+
+def print_help(message: telebot.types.Message):
+    text = ""
+    text += "/add_device - добавить устройство\n"
+    text += "/update_device - обновить информацию об устройстве\n"
+    text += "/delete_device - удалить устройство\n"
+    text += "/create_employee - создать сотрудника\n"
+    text += "/update_employee - обновить информацию об сотруднике\n"
+    text += "/delete_employee - удалить сотрудника\n"
+    text += "/get_all_devices - получить все устройства\n"
+    text += "/get_all_employees - получить всех сотрудников\n"
+    bot_master.send_message(message.from_user.id, text)
+
+
+@bot_master.message_handler(content_types=['text'])
+def get_text_messages_master(message: telebot.types.Message):
+    if message.from_user.id not in ADMIN_ID:
+        bot_master.send_message(message.from_user.id,
+                                "Вы не администратор")
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    match message.text:
+        case "/add_device":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(name;okey):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, add_device)
+        case "/update_device":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(id;name;okey):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, update_device)
+        case "/delete_device":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(id):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, delete_device)
+        case "/create_employee":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(tg_id;name;uid;valid_from;valid_to):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, delete_device)
+        case "/update_employee":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(id;tg_id;name;uid;valid_from;valid_to):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, delete_device)
+        case "/delete_employee":
+            bot_master.send_message(message.from_user.id,
+                                    "Введите данные(id):",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, delete_device)
+        case "/get_all_devices":
+            pass
+        case "/get_all_employees":
+            pass
+        case _:
+            print_help(message)
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def add_device(message: telebot.types.Message):
+    args = message.text.split(";")
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if len(args) != 2:
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, add_device)
+    name = args[0]
+    okey = True if args[1].lower() in ["true", "1"] else False
+    device = Device()
+    device.name = name
+    device.okey = okey
+    session = db_session.create_session()
+    session.add(device)
+    session.commit()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно создано")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def update_device(message: telebot.types.Message):
+    args = message.text.split(";")
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if len(args) != 3:
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_device)
+    if not args[0].isdigit():
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_device)
+    device_id = int(args[0])
+    name = args[1]
+    okey = True if args[2].lower() in ["true", "1"] else False
+    session = db_session.create_session()
+    device = session.query(Device).filter(Device.id == device_id).first()
+    if device is None:
+        bot_master.send_message(message.from_user.id, "Такого id нет, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_device)
+    if name != "":
+        device.name = name
+    if args[2] != "":
+        device.okey = okey
+    session.commit()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно обновлено")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def delete_device(message: telebot.types.Message):
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if not message.text.isdigit():
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    session = db_session.create_session()
+    device = session.query(Device).filter(Device.id == int(message.text)).first()
+    if device is None:
+        bot_master.send_message(message.from_user.id, "Такого id нет, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    session.delete(device)
+    session.commit()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно удалено")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def create_employee(message: telebot.types.Message):
+    global LAST_UID
+    session = db_session.create_session()
+    # Введите данные(tg_id; name; uid; valid_from; valid_to)
+    args = message.text.split(";")
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if len(args) != 5:
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, create_employee)
+    employee = Employee()
+    tg_id, name, uid, valid_from, valid_to = None, None, LAST_UID, None, None
+    if args[0] == "":
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, create_employee)
+    tg_id = int(args[0])
+    if args[1] == "":
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, create_employee)
+    name = args[1]
+    pattern = "%Y-%m-%d %H:%M:%S.%f"
+    if args[2] != "":
+        uid = args[2]
+    if args[3] != "":
+        try:
+            valid_from = datetime.datetime.strptime(args[3], pattern)
+        except Exception as err:
+            bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, add_device)
+    if args[4] != "":
+        try:
+            valid_to = datetime.datetime.strptime(args[4], pattern)
+        except Exception as err:
+            bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, add_device)
+    employee.tg_id = tg_id
+    employee.name = name
+    employee.uid = uid
+    employee.valid_from = valid_from
+    employee.valid_to = valid_to
+    try:
+        session.add(employee)
+        session.commit()
+    except sqlalchemy.exc.IntegrityError:
+        session.close()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно создан")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def update_employee(message: telebot.types.Message):
+    # Введите данные(id;tg_id;name;uid;valid_from;valid_to):
+    session = db_session.create_session()
+    args = message.text.split(";")
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if len(args) != 6:
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_employee)
+    if not args[0].isdigit():
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_employee)
+    employee = session.query(Employee).filter(Employee.id == int(args[0])).first()
+    if employee is None:
+        bot_master.send_message(message.from_user.id, "Такого id нет, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_employee)
+    args = args[1:]
+    tg_id = employee.tg_id
+    name = employee.name
+    uid = employee.uid
+    valid_from = employee.valid_from
+    valid_to = employee.valid_to
+    if args[0] != "":
+        tg_id = int(args[0])
+    if args[1] != "":
+        name = args[1]
+    pattern = "%Y-%m-%d %H:%M:%S.%f"
+    if args[2] != "":
+        uid = args[2]
+    if args[3] != "":
+        try:
+            valid_from = datetime.datetime.strptime(args[3], pattern)
+        except Exception as err:
+            bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, update_employee)
+    if args[4] != "":
+        try:
+            valid_to = datetime.datetime.strptime(args[4], pattern)
+        except Exception as err:
+            bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
+                                    reply_markup=keyboard_creator(["Отмена"]))
+            return bot_master.register_next_step_handler(message, update_employee)
+    employee.tg_id = tg_id
+    employee.name = name
+    employee.uid = uid
+    employee.valid_from = valid_from
+    employee.valid_to = valid_to
+    try:
+        session.commit()
+    except sqlalchemy.exc.IntegrityError:
+        session.close()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно обновлен")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def delete_employee(message: telebot.types.Message):
+    if message.text == "Отмена":
+        print_help(message)
+        return bot_master.register_next_step_handler(message, get_text_messages_master)
+    if not message.text.isdigit():
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_employee)
+    session = db_session.create_session()
+    employee = session.query(Employee).filter(Employee.id == int(message.text)).first()
+    if employee is None:
+        bot_master.send_message(message.from_user.id, "Такого id нет, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_employee)
+    session.delete(employee)
+    session.commit()
+    session.close()
+    bot_master.send_message(message.from_user.id, "Успешно удалено")
+    return bot_master.register_next_step_handler(message, get_text_messages_master)
+
+
+def get_all_devices(message: telebot.types.Message):
+    pass
+
+
+def get_all_employees(message: telebot.types.Message):
+    pass
+
+
 # Telegram bot checker
 def checker():
     pattern = "%Y-%m-%d %H:%M:%S.%f"
@@ -595,6 +878,18 @@ def start_bot():
             print('\033[35mRestarting.....')
 
 
+def start_bot_master():
+    while True:
+        try:
+            print('\033[0mStarting.....')
+            bot_master.infinity_polling()
+        except Exception as err:
+            print('\033[31mCrashed.....')
+            print(f"Error: {err}")
+            time.sleep(5)
+            print('\033[35mRestarting.....')
+
+
 def start_checker():
     while True:
         try:
@@ -609,8 +904,10 @@ def start_api():
 
 
 thread_bot = threading.Thread(target=start_bot)
+thread_bot_master = threading.Thread(target=start_bot_master)
 thread_checker = threading.Thread(target=start_checker)
 thread_api = threading.Thread(target=start_api)
 thread_bot.start()
+thread_bot_master.start()
 thread_checker.start()
 thread_api.start()
