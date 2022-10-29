@@ -360,43 +360,41 @@ def get_text_messages_master(message: telebot.types.Message):
         bot_master.send_message(message.from_user.id,
                                 "Вы не администратор")
         return bot_master.register_next_step_handler(message, get_text_messages_master)
-    match message.text:
-        case "/add_device":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(name;okey):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, add_device)
-        case "/update_device":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(id;name;okey):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, update_device)
-        case "/delete_device":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(id):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, delete_device)
-        case "/create_employee":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(tg_id;name;uid;valid_from;valid_to):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, delete_device)
-        case "/update_employee":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(id;tg_id;name;uid;valid_from;valid_to):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, delete_device)
-        case "/delete_employee":
-            bot_master.send_message(message.from_user.id,
-                                    "Введите данные(id):",
-                                    reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, delete_device)
-        case "/get_all_devices":
-            pass
-        case "/get_all_employees":
-            pass
-        case _:
-            print_help(message)
+    if message.text == "/add_device":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(name;okey):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, add_device)
+    if message.text == "/update_device":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(id;name;okey):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, update_device)
+    if message.text == "/delete_device":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(id):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    if message.text == "/create_employee":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(tg_id;name;uid;valid_from;valid_to):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    if message.text == "/update_employee":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(id;tg_id;name;uid;valid_from;valid_to):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    if message.text == "/delete_employee":
+        bot_master.send_message(message.from_user.id,
+                                "Введите данные(id):",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, delete_device)
+    if message.text == "/get_all_devices":
+        pass
+    if message.text == "/get_all_employees":
+        pass
+    print_help(message)
     return bot_master.register_next_step_handler(message, get_text_messages_master)
 
 
