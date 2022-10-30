@@ -219,7 +219,8 @@ def main_menu(message: telebot.types.Message):
                                  reply_markup=keyboard_creator(["Отмена"]))
             return bot_jun.register_next_step_handler(message, task_ask_2)
     if message.text == "/my_id":
-        bot_jun.send_message(message.from_user.id, f"Ваш Tg_ID: {message.from_user.id}")
+        bot_jun.send_message(message.from_user.id, f"Ваш Tg_ID:")
+        bot_jun.send_message(message.from_user.id, f"{message.from_user.id}")
     else:
         print_menu(message)
     return bot_jun.register_next_step_handler(message, main_menu)
@@ -379,21 +380,21 @@ def get_text_messages_master(message: telebot.types.Message):
         bot_master.send_message(message.from_user.id,
                                 "Введите данные(tg_id;name;uid;valid_from;valid_to):",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, delete_device)
+        return bot_master.register_next_step_handler(message, create_employee1)
     if message.text == "/update_employee":
         bot_master.send_message(message.from_user.id,
                                 "Введите данные(id;tg_id;name;uid;valid_from;valid_to):",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, delete_device)
+        return bot_master.register_next_step_handler(message, update_employee)
     if message.text == "/delete_employee":
         bot_master.send_message(message.from_user.id,
                                 "Введите данные(id):",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, delete_device)
+        return bot_master.register_next_step_handler(message, delete_employee)
     if message.text == "/get_all_devices":
-        pass
+        return get_all_devices(message)
     if message.text == "/get_all_employees":
-        pass
+        return get_all_employees(message)
     print_help(message)
     return bot_master.register_next_step_handler(message, get_text_messages_master)
 
@@ -473,47 +474,51 @@ def delete_device(message: telebot.types.Message):
     return bot_master.register_next_step_handler(message, get_text_messages_master)
 
 
-def create_employee(message: telebot.types.Message):
+def create_employee1(message: telebot.types.Message):
     global LAST_UID
     session = db_session.create_session()
     # Введите данные(tg_id; name; uid; valid_from; valid_to)
-    args = message.text.split(";")
+    args_text = message.text.split(";")
     if message.text == "Отмена":
         print_help(message)
         return bot_master.register_next_step_handler(message, get_text_messages_master)
-    if len(args) != 5:
+    if len(args_text) != 5:
         bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, create_employee)
+        return bot_master.register_next_step_handler(message, create_employee1)
     employee = Employee()
     tg_id, name, uid, valid_from, valid_to = None, None, LAST_UID, None, None
-    if args[0] == "":
+    if args_text[0] == "":
         bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, create_employee)
-    tg_id = int(args[0])
-    if args[1] == "":
+        return bot_master.register_next_step_handler(message, create_employee1)
+    tg_id = int(args_text[0])
+    if args_text[1] == "":
         bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
                                 reply_markup=keyboard_creator(["Отмена"]))
-        return bot_master.register_next_step_handler(message, create_employee)
-    name = args[1]
+        return bot_master.register_next_step_handler(message, create_employee1)
+    name = args_text[1]
     pattern = "%Y-%m-%d %H:%M:%S.%f"
-    if args[2] != "":
-        uid = args[2]
-    if args[3] != "":
+    if args_text[2] != "":
+        uid = args_text[2]
+    elif LAST_UID == "":
+        bot_master.send_message(message.from_user.id, "Неверно введены данные, попробуйте снова:",
+                                reply_markup=keyboard_creator(["Отмена"]))
+        return bot_master.register_next_step_handler(message, create_employee1)
+    if args_text[3] != "":
         try:
-            valid_from = datetime.datetime.strptime(args[3], pattern)
+            valid_from = datetime.datetime.strptime(args_text[3], pattern)
         except Exception as err:
             bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
                                     reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, add_device)
-    if args[4] != "":
+            return bot_master.register_next_step_handler(message, create_employee1)
+    if args_text[4] != "":
         try:
-            valid_to = datetime.datetime.strptime(args[4], pattern)
+            valid_to = datetime.datetime.strptime(args_text[4], pattern)
         except Exception as err:
             bot_master.send_message(message.from_user.id, f"{err}, попробуйте снова:",
                                     reply_markup=keyboard_creator(["Отмена"]))
-            return bot_master.register_next_step_handler(message, add_device)
+            return bot_master.register_next_step_handler(message, create_employee1)
     employee.tg_id = tg_id
     employee.name = name
     employee.uid = uid
@@ -612,11 +617,32 @@ def delete_employee(message: telebot.types.Message):
 
 
 def get_all_devices(message: telebot.types.Message):
-    pass
+    f = open("push.txt", mode="w", encoding="utf-8")
+    session = db_session.create_session()
+    devices = session.query(Device).all()
+    f.write("id name working okey\n")
+    for device in devices:
+        device: Device
+        f.write(f"{device.id}|{device.name}|{device.working}|{device.okey}\n")
+    f.close()
+    f = open("push.txt", mode="rb")
+    bot_master.send_document(message.from_user.id, f)
+    f.close()
 
 
 def get_all_employees(message: telebot.types.Message):
-    pass
+    f = open("push.txt", mode="w", encoding="utf-8")
+    session = db_session.create_session()
+    employees = session.query(Employee).all()
+    f.write("id tg_id name uid valid_from valid_to\n")
+    for employee in employees:
+        employee: Employee
+        f.write(f"{employee.id}|{employee.tg_id}|{employee.name}|{employee.uid}|"
+                f"{employee.valid_from}|{employee.valid_to}\n")
+    f.close()
+    f = open("push.txt", mode="rb")
+    bot_master.send_document(message.from_user.id, f)
+    f.close()
 
 
 # Telegram bot checker
@@ -652,7 +678,7 @@ def checker():
 
 
 @app.route('/api/get_all_devices', methods=['GET'])
-def get_all_devices():
+def get_all_devices1():
     session = db_session.create_session()
     devices = session.query(Device).all()
     ans = []
@@ -727,7 +753,7 @@ def delete():
 
 
 @app.route('/api/get_all_employees', methods=['GET'])
-def get_all_employees():
+def get_all_employees1():
     session = db_session.create_session()
     employees = session.query(Employee).all()
     ans = []
@@ -765,7 +791,7 @@ def create_employee():
 
 
 @app.route('/api/update_employee', methods=['POST'])
-def update_employee():
+def update_employee1():
     if not request.json:
         abort(500)
     session = db_session.create_session()
@@ -792,7 +818,7 @@ def update_employee():
 
 
 @app.route('/api/delete_employee', methods=['POST'])
-def delete_employee():
+def delete_employee1():
     if not request.json:
         abort(500)
     session = db_session.create_session()
